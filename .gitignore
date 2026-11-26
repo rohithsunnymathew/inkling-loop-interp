@@ -1,0 +1,10 @@
+# model weights and large intermediates (regenerate with the scripts)
+*.gguf
+*.npy
+experts/llama-build/
+experts/imatrix/
+experts/imatrix_perpass/
+# logs can contain local paths
+*.log
+__pycache__/
+.DS_Store

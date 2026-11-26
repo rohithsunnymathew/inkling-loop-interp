@@ -1,0 +1,26 @@
+--- a/tools/imatrix/imatrix.cpp
++++ b/tools/imatrix/imatrix.cpp
+@@ -1,3 +1,5 @@
++#include <cstdlib>
++#include <cstring>
+ #include "llama.h"
+ 
+ #include "arg.h"
+@@ -564,6 +566,17 @@
+     const struct ggml_tensor * src1 = t->src[1];
+     std::string wname = filter_tensor_name(src0->name);
+ 
++    // INKLING-PASS PATCH: with IMATRIX_PER_SLOT=1, key expert matmuls by layer visit
++    // (the "-<il>" suffix of the graph node name) instead of the shared physical weight,
++    // so each pass through a looped core is recorded separately as blk.<visit>.*
++    if (t->op == GGML_OP_MUL_MAT_ID && std::getenv("IMATRIX_PER_SLOT") && wname.rfind("blk.", 0) == 0) {
++        const char * dash = std::strrchr(t->name, '-');
++        const size_t dot = wname.find('.', 4);
++        if (dash && dash[1] >= '0' && dash[1] <= '9' && dot != std::string::npos) {
++            wname = "blk." + std::to_string(std::atoi(dash + 1)) + wname.substr(dot);
++        }
++    }
++
+     const int32_t chunk_size = m_params.n_ctx / m_params.n_parallel;
+ 
+     // when ask is true, the scheduler wants to know if we are interested in data from this tensor

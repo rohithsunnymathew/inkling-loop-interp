@@ -1,0 +1,20 @@
+--- a/src/llama-graph.cpp
++++ b/src/llama-graph.cpp
+@@ -2688,6 +2688,17 @@
+             // merged gate_up path: one mul_mat_id, then split into gate and up views
+             ggml_tensor * gate_up = build_lora_mm_id(gate_up_exps, cur, ids, mm_ids, cached); // [n_ff*2, n_expert_used, n_tokens]
+             cb(gate_up, "ffn_moe_gate_up", il);
++            // INKLING-PASS PATCH: per-expert scales / LoRA wrap the mul_mat_id in mul/add ops,
++            // so label the underlying mul_mat_id with the layer visit too (name only, no math change)
++            if (il >= 0) {
++                for (ggml_tensor * x = gate_up; x != nullptr; x = x->src[0]) {
++                    if (x->op == GGML_OP_MUL_MAT_ID) {
++                        if (x != gate_up) { ggml_format_name(x, "ffn_moe_gate_up_mm-%d", il); }
++                        break;
++                    }
++                    if (x->op != GGML_OP_MUL && x->op != GGML_OP_ADD) { break; }
++                }
++            }
+ 
+             if (gate_up_exps_b) {
+                 gate_up = ggml_add_id(ctx0, gate_up, gate_up_exps_b, ids);
